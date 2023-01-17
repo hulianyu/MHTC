@@ -1,7 +1,7 @@
 clearvars
 addpath([cd '/']);
 load('PerformanceComparison.mat');
-%% 19 UCI data sets
+%% 25 UCI data sets
 addpath([cd '/Datasets']);
 filename = char('lenses','lung-cancer','soybean-small','photo-evaluation','assistant-evaluation','zoo','dna-promoter','hayes-roth','lymphography','heart-disease','solar-flare','primary-tumor','dermatology','house-votes',...
     'balance-scale','credit-approval','breast-cancer-wisconsin','mammographic-mass','tic-tac-toe',...
