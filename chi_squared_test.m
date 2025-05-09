@@ -21,6 +21,7 @@ for m=1:M
     s = sum(((oc-ec).^2)./ec,'all');% chi-squared statistic
     chi = chi + s;
     df = (Q-1)*(K-1);% degrees of freedom
-    p(1,m) = chi2cdf(s,df,'upper');
+    % p(1,m) = chi2cdf(s,df,'upper');
+    p(1,m) = simplifiedChi2cdf(s,df); % 'upper'
 end
 end

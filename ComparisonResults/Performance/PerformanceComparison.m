@@ -6,17 +6,20 @@ filename = char('lenses','lung-cancer','soybean-small','photo-evaluation','assis
     'balance-scale','credit-approval','breast-cancer-wisconsin','mammographic-mass','tic-tac-toe',...
     'lecturer-evaluation','car','titanic','chess','mushroom','nursery');
 IS = size(filename,1);
-RunningTimes = zeros(IS,10); % seconds (for each clustering algorithm)
-Pi_random = cell(IS,1);
+RunningTimes = zeros(IS,12); % seconds (for each clustering algorithm)
 %% Load Evaluation package
 addpath([cd '/Evaluation']); % 7 metrics [ACC, NMI, Purity, ARI, Precision, Recall, F-score]
 %% set execute times (for each clustering algorithm)
 ET = 50;
+%% Random partition
+% [0] Random
+Pi_Random = cell(IS,1);
+Metric_Random = zeros(IS,7); % performance metrics
 %% Our method
 % [1] K-MHTC
 Pi_MHTC = cell(IS,1); % a locally optimal partition
 Metric_MHTC = zeros(IS,7); % performance metrics
-%% Comparison methods: CU, k-modes, Entropy, CDC_DR, DV, CMS, CDE, HD-NDW, Het2Hom
+%% Comparison methods: CU, k-modes, Entropy, CDC_DR, DV, CMS, CDE, HD-NDW, Het2Hom, COForest, SigDT
 % [2] CU
 addpath([cd '/ComparisonMethods/CU']);
 Pi_CU = cell(IS,1); % a locally optimal partition
@@ -55,7 +58,14 @@ Metric_HDNDW = zeros(IS,7);
 addpath([cd '/ComparisonMethods/Het2Hom']);
 Pi_Het2Hom = cell(IS,1);
 Metric_Het2Hom = zeros(IS,7);
-
+% [11] COForest
+addpath([cd '/ComparisonMethods/COForest']);
+Pi_COForest = cell(IS,1);
+Metric_COForest = zeros(IS,7);
+% [12] SigDT
+addpath([cd '/ComparisonMethods/SigDT']);
+Pi_SigDT = cell(IS,1);
+Metric_SigDT = zeros(IS,7);
 %% Choose a data set I
 for I=1:2
     disp("Datasets:");disp(strtrim(filename(I,:)));
@@ -67,6 +77,16 @@ for I=1:2
     M = size(X,2); %Attribute Number
     K = length(unique(X_Label)); %Cluster Number
     %% Performance
+    %% [0] Random
+    disp("Random");
+    rng(I,'twister'); % Generate Random Numbers That Are Repeatable
+    pi0 = randi([1 K],N,ET);
+    Pi_Random{I,1} = pi0;
+    % evaluate the metrics (average)
+    for runs = 1:ET
+        Metric_Random(I,:) = Metric_Random(I,:) + [ClusteringMeasure(X_Label, pi0(:,runs))];
+    end
+    Metric_Random(I,:) = Metric_Random(I,:)./ET;
     %% [1] K-MHTC
     disp("K-MHTC");
     Pi = zeros(size(X,1),ET);
@@ -74,7 +94,7 @@ for I=1:2
     tic
     rng(I,'twister'); % Generate Random Numbers That Are Repeatable
     pi0 = randi([1 K],N,ET);
-    Pi_random{I,1} = pi0;
+    % Pi_random{I,1} = pi0;
     for runs=1:ET
         [~,pi_runs,chi] = Refinement_Chi(X,pi0(:,runs));
         Pi(:,runs) = pi_runs;
@@ -93,7 +113,7 @@ for I=1:2
     tic
     rng(I,'twister'); % Generate Random Numbers That Are Repeatable
     pi0 = randi([1 K],N,ET);
-    Pi_random{I,1} = pi0;
+    % Pi_random{I,1} = pi0;
     for runs=1:ET
         [~,pi_runs,chi] = Refinement_CU(X,pi0(:,runs));
         Pi(:,runs) = pi_runs;
@@ -110,7 +130,7 @@ for I=1:2
     Pi = zeros(size(X,1),ET);
     tic
     for runs = 1:ET
-        pi_runs = kmode(X, K);
+        pi_runs = kmode_random(X, K);
         Pi(:,runs) = pi_runs;
     end
     RunningTimes(I,3) = toc;
@@ -234,8 +254,54 @@ for I=1:2
         Metric_Het2Hom(I,:) = Metric_Het2Hom(I,:) + [ClusteringMeasure(X_Label, Pi(:,runs))];
     end
     Metric_Het2Hom(I,:) = Metric_Het2Hom(I,:)./ET;
+    %% [11] COForest (2024)
+    disp("COForest");
+    Pi = zeros(size(X,1),ET);
+    tic
+    runs = 1;
+    while runs <= ET
+        try
+            pi_runs = COForest_main(X,K);
+            Pi(:,runs) = pi_runs;
+            runs = runs + 1;  
+        catch
+            disp('An error occurred. Skipping this run.');
+        end
+    end
+    RunningTimes(I,11) = toc;
+    Pi_COForest{I,1} = Pi;
+    % evaluate the metrics (average)
+    for runs = 1:ET
+        Metric_COForest(I,:) = Metric_COForest(I,:) + [ClusteringMeasure(X_Label, Pi(:,runs))];
+    end
+    Metric_COForest(I,:) = Metric_COForest(I,:)./ET;
+    %% [12] SigDT (2025)
+    disp("SigDT");
+    Pi = zeros(size(X,1),ET);
+    tic
+    for runs = 1:ET
+        pi_runs = SigDT_main(X);
+        Pi(:,runs) = pi_runs;
+    end
+    RunningTimes(I,12) = toc;
+    Pi_SigDT{I,1} = Pi;
+    % evaluate the metrics (average)
+    for runs = 1:ET
+        Metric_SigDT(I,:) = Metric_SigDT(I,:) + [ClusteringMeasure(X_Label, Pi(:,runs))];
+    end
+    Metric_SigDT(I,:) = Metric_SigDT(I,:)./ET;
     %% Save the results
-%     save('_PerformanceComparison.mat','RunningTimes','ET','Pi_MHTC','Metric_MHTC','Pi_CU','Metric_CU','Pi_kmodes','Metric_kmodes',...
-%         'Pi_Entropy','Metric_Entropy','Pi_CDC_DR','Metric_CDC_DR','Pi_DV','Metric_DV','DV_k',...
-%         'Pi_CMS','Metric_CMS','Pi_CDE','Metric_CDE','Pi_HDNDW','Metric_HDNDW','Pi_Het2Hom','Metric_Het2Hom');
+    save('_PerformanceComparison-2025.mat','RunningTimes','ET',...
+        'Pi_Random','Metric_Random',...
+        'Pi_MHTC','Metric_MHTC',...
+        'Pi_CU','Metric_CU',...
+        'Pi_kmodes','Metric_kmodes',...
+        'Pi_Entropy','Metric_Entropy',...
+        'Pi_CDC_DR','Metric_CDC_DR',...
+        'Pi_CMS','Metric_CMS',...
+        'Pi_CDE','Metric_CDE',...
+        'Pi_HDNDW','Metric_HDNDW',...
+        'Pi_Het2Hom','Metric_Het2Hom',...
+        'Pi_COForest','Metric_COForest',...
+        'Pi_SigDT','Metric_SigDT');
 end

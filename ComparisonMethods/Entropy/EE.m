@@ -1,7 +1,7 @@
 function eva = EE(Xm,pi)
 % expected entropy (EE) of the partition
 % entropy criterion: Li T, Ma S, Ogihara M. Entropy-based criterion in categorical clustering[C]. ICML. 2004.
-N = size(Xm,2);
+N = size(Xm,1);
 M = size(Xm,2);
 K = max(pi);
 eva_mk = zeros(M,K);
