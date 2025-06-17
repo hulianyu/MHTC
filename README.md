@@ -15,7 +15,9 @@ If you find my code useful please consider citing:
       author={Hu, Lianyu and Jiang, Mudi and Liu, Yan and Zou, Quan and He, Zengyou},
       journal={ACM Transactions on Knowledge Discovery from Data},
       year={2025},
+      volume = {19},
+      number = {5},
+      articleno = {109},
       publisher = {Association for Computing Machinery},
-      note = {Just Accepted},
       doi={10.1145/3735977}
     }
